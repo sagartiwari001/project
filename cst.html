@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management App</title>
+    <style>
+        /* Basic CSS styling */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <h1>Login</h1>
+            <form id="loginForm">
+                <label for="login_id">Email:</label>
+                <input type="text" id="login_id" name="login_id" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+
+        <!-- Customer List Screen -->
+        <div id="customerList" style="display: none;">
+            <h1>Customer List</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTableBody">
+                    <!-- Customer data will be displayed here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add a New Customer Screen -->
+        <div id="addCustomer" style="display: none;">
+            <h1>Add a New Customer</h1>
+            <form id="addCustomerForm">
+                <label for="first_name">First Name:</label>
+                <input type="text" id="first_name" name="first_name" required><br>
+                <label for="last_name">Last Name:</label>
+                <input type="text" id="last_name" name="last_name" required><br>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required><br>
+                <!-- Add other customer fields as needed -->
+                <button type="submit">Add Customer</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript code to handle API requests and screen switching
+        const loginForm = document.getElementById('loginForm');
+        const customerList = document.getElementById('customerList');
+        const addCustomer = document.getElementById('addCustomer');
+        const customerTableBody = document.getElementById('customerTableBody');
+
+        
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const loginData = {
+        login_id: "test@sunbasedata.com", // Use the provided login ID
+        password: "Test@123"             // Use the provided password
+    };
+
+    try {
+    const response = await fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment_auth.jsp', {
+        method: 'POST',
+        mode:'no-cors',
+        headers:{'Content-Type': 'application/json'},
+        body : JSON.stringify(loginData),
+        });
+      
+    if (response.status === 403) {
+        console.error('Authentication failed. Server responded with a 403 Forbidden error.');
+        alert('Authentication failed. Please check your credentials.');
+    } else if (response.status === 200) {
+        const responseText = await response.text();
+        if (!responseText.trim()) {
+            console.error('API Error: Empty response body');
+            alert('An error occurred during the API request. Response body is empty.');
+        } else {
+            // Process the response data here
+            console.log('Response Data:', responseText);
+        }
+    } else {
+        console.error('API Error:', response.status, response.statusText);
+        alert('An error occurred during the API request.');
+    }
+} catch (error) {
+    console.error('API Request Error:', error);
+    alert('An error occurred during the API request.');
+}
+
+});
+
+
+
+        // Handle switching between screens
+        function switchScreen(screen) {
+            loginScreen.style.display = 'none';
+            customerList.style.display = 'none';
+            addCustomer.style.display = 'none';
+
+            if (screen === 'customerList') {
+                loadCustomerList();
+                customerList.style.display = 'block';
+            } else if (screen === 'addCustomer') {
+                addCustomer.style.display = 'block';
+            } else {
+                loginScreen.style.display = 'block';
+            }
+        }
+
+        // Load customer list from the API
+        async function loadCustomerList() {
+            // Retrieve the bearer token from local storage
+            const bearerToken = localStorage.getItem('bearerToken');
+            if (!bearerToken) {
+                switchScreen('login');
+                return;
+            }
+
+            // Make an API call to get the customer list
+            try {
+                const response = await fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${bearerToken}`
+                    }
+                });
+
+                if (response.status === 200) {
+                    const customerData = await response.json();
+                    displayCustomerList(customerData);
+                } else {
+                    alert('Failed to fetch customer list. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while loading the customer list.');
+            }
+        }
+
+        // Display the customer list in the table
+        function displayCustomerList(customers) {
+            customerTableBody.innerHTML = '';
+
+            customers.forEach((customer) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${customer.first_name}</td>
+                    <td>${customer.last_name}</td>
+                    <td>${customer.email}</td>
+                    <td>
+                        <button onclick="editCustomer('${customer.uuid}')">Edit</button>
+                        <button onclick="deleteCustomer('${customer.uuid}')">Delete</button>
+                    </td>
+                `;
+                customerTableBody.appendChild(row);
+            });
+        }
+
+        // Function to handle adding a new customer (not implemented in this example)
+        // You can use the provided API endpoint to create a new customer
+
+        // Function to handle editing a customer (not implemented in this example)
+        // You can use the provided API endpoint to update an existing customer
+
+        // Function to handle deleting a customer (not implemented in this example)
+        // You can use the provided API endpoint to delete a customer
+    </script>
+</body>
+
+</html>
